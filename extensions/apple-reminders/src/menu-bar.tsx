@@ -22,7 +22,7 @@ import {
   setDueDate as setReminderDueDate,
 } from "swift:../swift/AppleReminders";
 
-import { getAttachedUrls, getPriorityIcon, isOverdue, isToday, isTomorrow, truncate } from "./helpers";
+import { formatReminderTime, getAttachedUrls, getPriorityIcon, isOverdue, isToday, isTomorrow, truncate } from "./helpers";
 import { Priority, Reminder, useData } from "./hooks/useData";
 import { sortByDate } from "./hooks/useViewReminders";
 
