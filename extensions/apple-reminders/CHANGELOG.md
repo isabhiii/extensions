@@ -1,5 +1,10 @@
 # Apple Reminders Changelog
 
+## [Auto-route urgent reminders to Urgent list] - {PR_MERGE_DATE}
+
+- Add "Auto-Route Urgent Reminders" preference to "Create Reminder" and "Quick Add Reminder" commands to automatically move high-priority or `#urgent`/`#important` reminders to a designated Urgent list.
+- Add "Urgent List Name" preference to customize the target urgent list name (defaults to `Urgent`).
+
 ## [Default list for Quick Add] - 2026-09-23
 
 - Add "Default List" preference to the "Quick Add Reminder" command to automatically assign reminders to a specified list when no list is mentioned.

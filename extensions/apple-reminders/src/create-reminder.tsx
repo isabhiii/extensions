@@ -90,12 +90,19 @@ export function CreateReminderForm({ draftValues, listId, mutate }: CreateRemind
 
   const defaultList = data?.lists.find((list) => list.isDefault);
 
-  const { selectDefaultList, selectTodayAsDefault } = getPreferenceValues<Preferences.CreateReminder>();
+  const { selectDefaultList, selectTodayAsDefault, autoRouteUrgentList, urgentListName } =
+    getPreferenceValues<Preferences.CreateReminder>();
+
+  const targetUrgentName = (urgentListName?.trim() || "Urgent").toLowerCase();
+  const urgentList = data?.lists.find((list) => list.title.trim().toLowerCase() === targetUrgentName);
+
   let initialListId;
-  if (listId !== "all") {
+  if (listId !== "all" && listId) {
     initialListId = listId;
   } else if (draftValues?.listId) {
     initialListId = draftValues.listId;
+  } else if (autoRouteUrgentList && urgentList && draftValues?.priority === "high") {
+    initialListId = urgentList.id;
   } else if (selectDefaultList && defaultList) {
     initialListId = defaultList.id;
   }
@@ -385,7 +392,22 @@ export function CreateReminderForm({ draftValues, listId, mutate }: CreateRemind
         ];
       case "priority":
         return [
-          <Form.Dropdown key="priority" {...itemProps.priority} title="Priority" storeValue>
+          <Form.Dropdown
+            key="priority"
+            {...itemProps.priority}
+            title="Priority"
+            storeValue
+            onChange={(newValue) => {
+              itemProps.priority.onChange?.(newValue);
+              if (autoRouteUrgentList && urgentList) {
+                if (newValue === "high") {
+                  setValue("listId", urgentList.id);
+                } else if (values.listId === urgentList.id && defaultList) {
+                  setValue("listId", defaultList.id);
+                }
+              }
+            }}
+          >
             <Form.Dropdown.Item title="None" value="" />
             <Form.Dropdown.Item title="High" value="high" icon={getPriorityIcon("high")} />
             <Form.Dropdown.Item title="Medium" value="medium" icon={getPriorityIcon("medium")} />
@@ -400,6 +422,19 @@ export function CreateReminderForm({ draftValues, listId, mutate }: CreateRemind
             title="Tags"
             placeholder="work, urgent or #work #urgent"
             info="Supports comma- or space-separated tags with or without #. Stored in Apple Reminders native tag format."
+            onChange={(newTags) => {
+              itemProps.tags.onChange?.(newTags);
+              if (autoRouteUrgentList && urgentList) {
+                const parsed = parseTags(newTags);
+                const hasUrgent = parsed.some((t) => {
+                  const lower = t.toLowerCase();
+                  return lower === "urgent" || lower === "important";
+                });
+                if (hasUrgent) {
+                  setValue("listId", urgentList.id);
+                }
+              }
+            }}
           />,
         ];
       case "location":

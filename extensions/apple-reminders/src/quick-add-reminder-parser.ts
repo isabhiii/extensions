@@ -57,13 +57,24 @@ export function parseAIResponse(response: string): ParsedQuickAddReminder {
   return parsed;
 }
 
+export type ResolveQuickAddOptions = {
+  defaultListName?: string;
+  autoRouteUrgentList?: boolean;
+  urgentListName?: string;
+};
+
 export function resolveQuickAddReminder(
   reminder: ParsedQuickAddReminder,
   inputText: string,
   lists: QuickAddList[],
   now: Date = new Date(),
-  defaultListName?: string,
+  defaultListNameOrOptions?: string | ResolveQuickAddOptions,
 ): ParsedQuickAddReminder {
+  const options =
+    typeof defaultListNameOrOptions === "string"
+      ? { defaultListName: defaultListNameOrOptions }
+      : (defaultListNameOrOptions ?? {});
+
   const mentionedList = findListInText(inputText, lists) ?? findListInText(reminder.title, lists);
   let { title } = reminder;
   let listId = reminder.listId || undefined;
@@ -83,14 +94,6 @@ export function resolveQuickAddReminder(
     listId = undefined;
   }
 
-  if (!listId && defaultListName?.trim()) {
-    const trimmedDefault = defaultListName.trim().toLowerCase();
-    const matchedList = lists.find((list) => list.title.trim().toLowerCase() === trimmedDefault);
-    if (matchedList) {
-      listId = matchedList.id;
-    }
-  }
-
   if (!dueDate) {
     const extracted = extractDueDateFromText(inputText, now);
     if (extracted.dueDate) {
@@ -103,6 +106,31 @@ export function resolveQuickAddReminder(
   title = extractedTags.title;
   const initialTags = parseTags(reminder.tags);
   const combinedTags = Array.from(new Set([...initialTags, ...extractedTags.tags]));
+
+  if (!listId && options.autoRouteUrgentList) {
+    const isUrgentOrHigh =
+      priority === "high" ||
+      combinedTags.some((tag) => {
+        const lower = tag.toLowerCase();
+        return lower === "urgent" || lower === "important";
+      });
+
+    if (isUrgentOrHigh) {
+      const targetUrgentName = (options.urgentListName?.trim() || "Urgent").toLowerCase();
+      const matchedUrgentList = lists.find((list) => list.title.trim().toLowerCase() === targetUrgentName);
+      if (matchedUrgentList) {
+        listId = matchedUrgentList.id;
+      }
+    }
+  }
+
+  if (!listId && options.defaultListName?.trim()) {
+    const trimmedDefault = options.defaultListName.trim().toLowerCase();
+    const matchedList = lists.find((list) => list.title.trim().toLowerCase() === trimmedDefault);
+    if (matchedList) {
+      listId = matchedList.id;
+    }
+  }
 
   return {
     ...reminder,

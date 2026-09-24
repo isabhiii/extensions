@@ -430,6 +430,90 @@ describe("Quick Add Natural Language Resolution with Tags", () => {
     const parsed = parseAIResponse(aiInvalid);
     assert.strictEqual(parsed.recurrence, undefined);
   });
+
+  it("auto-routes high priority or urgent tags to urgent list when autoRouteUrgentList is true", () => {
+    const lists = [
+      { id: "list-inbox", title: "Inbox" },
+      { id: "list-urgent", title: "Urgent" },
+    ];
+
+    // Priority high -> routes to Urgent list
+    const resHigh = resolveQuickAddReminder(
+      { title: "Fix production bug", priority: "high" },
+      "Fix production bug",
+      lists,
+      new Date(),
+      { autoRouteUrgentList: true, defaultListName: "Inbox" },
+    );
+    assert.strictEqual(resHigh.listId, "list-urgent");
+
+    // Tag #urgent -> routes to Urgent list
+    const resUrgentTag = resolveQuickAddReminder(
+      { title: "Emergency fix #urgent" },
+      "Emergency fix #urgent",
+      lists,
+      new Date(),
+      { autoRouteUrgentList: true, defaultListName: "Inbox" },
+    );
+    assert.strictEqual(resUrgentTag.listId, "list-urgent");
+
+    // Tag #important -> routes to Urgent list
+    const resImportantTag = resolveQuickAddReminder(
+      { title: "Review contract #important" },
+      "Review contract #important",
+      lists,
+      new Date(),
+      { autoRouteUrgentList: true, defaultListName: "Inbox" },
+    );
+    assert.strictEqual(resImportantTag.listId, "list-urgent");
+
+    // Custom urgent list name
+    const customLists = [
+      { id: "list-inbox", title: "Inbox" },
+      { id: "list-critical", title: "Critical Tasks" },
+    ];
+    const resCustomUrgent = resolveQuickAddReminder(
+      { title: "System down #urgent" },
+      "System down #urgent",
+      customLists,
+      new Date(),
+      { autoRouteUrgentList: true, urgentListName: "Critical Tasks" },
+    );
+    assert.strictEqual(resCustomUrgent.listId, "list-critical");
+
+    // Explicit list mentioned in text takes precedence over urgent list
+    const resExplicit = resolveQuickAddReminder(
+      { title: "High priority task #Work", priority: "high" },
+      "High priority task #Work",
+      [
+        { id: "list-work", title: "Work" },
+        { id: "list-urgent", title: "Urgent" },
+      ],
+      new Date(),
+      { autoRouteUrgentList: true },
+    );
+    assert.strictEqual(resExplicit.listId, "list-work");
+
+    // Normal priority without urgent tag routes to default list
+    const resNormal = resolveQuickAddReminder(
+      { title: "Regular reminder" },
+      "Regular reminder",
+      lists,
+      new Date(),
+      { autoRouteUrgentList: true, defaultListName: "Inbox" },
+    );
+    assert.strictEqual(resNormal.listId, "list-inbox");
+
+    // autoRouteUrgentList false does not route high priority to urgent list
+    const resDisabled = resolveQuickAddReminder(
+      { title: "Fix production bug", priority: "high" },
+      "Fix production bug",
+      lists,
+      new Date(),
+      { autoRouteUrgentList: false, defaultListName: "Inbox" },
+    );
+    assert.strictEqual(resDisabled.listId, "list-inbox");
+  });
 });
 
 describe("Reminder List Item Tag Display", () => {
